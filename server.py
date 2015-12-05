@@ -43,9 +43,9 @@ def server():
                 sockfd, addr = ser_socket.accept()
                 SERVER_LIST.append(sockfd)
 
-                print("Client: (%s, %s) " % addr)
+                print("Client: (%s) " % addr)
 
-                broadcast(ser_socket, sockfd, "[%s:%s] entered our chatting room\n" % addr)
+                broadcast(ser_socket, sockfd, "[%s] entered our chatting room\n" % addr)
 
             # A already known connection knocks on the door
             else:
@@ -59,10 +59,10 @@ def server():
                         if sock in SERVER_LIST:
                             SERVER_LIST.remove(sock)
 
-                        broadcast(ser_socket, sock, "Client (%s, %s) is offline\n" % addr)
+                        broadcast(ser_socket, sock, "Client (%s) is offline\n" % addr)
 
                 except:
-                    broadcast(ser_socket, sock, "Client (%s, %s) is offline\n" % addr)
+                    broadcast(ser_socket, sock, "Client (%s) is offline\n" % addr)
                     continue
     # Always close connection when done using it
     ser_socket.close()
