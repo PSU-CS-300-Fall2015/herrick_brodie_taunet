@@ -37,8 +37,13 @@ def client():
 
         def display_all(self):
             current = self.head
+            if current is None:
+                print('************************\n',
+                      'there are no servers available, you should add some!')
             while current:
-                print('name:', current.name, '\nhost: ', current.host)
+                print('************************\n',
+                      'name:', current.name, '\n'
+                      ' host:', current.host, '\n')
                 current = current.next
 
         def delete_node(self, name):
@@ -48,17 +53,19 @@ def client():
             prev = None
             found = False
             while current and found is False:
-                if current.hostname == name:
+                if current.name == name:
                     found = True
                 else:
                     prev = current
                     current = current.next
             if current is None:
-                raise ValueError('hostname not found')
+                print('name not found')
+                return
             if prev is None:
                 self.head = current.next
             else:
                 prev.next = current.next
+            print('node deleted')
 
         def get_node(self, name):
             # search for node and return it
@@ -71,7 +78,7 @@ def client():
                 else:
                     current = current.next
             if current is None:
-                raise ValueError('hostname not found')
+                print('hostname not found')
             else:
                 return current.host
 
@@ -90,22 +97,23 @@ def menu(slist):
               '2) send message\n'
               '3) delete node\n'
               '4) display all nodes\n'
-              '5) quit ')
+              '5) quit \n'
+              '************************\n')
         choice = sys.stdin.readline()
         if int(choice) == 1:
+            print('************************')
             sys.stdout.write('please enter the person\'s name: '); sys.stdout.flush()
             name = sys.stdin.readline()
             sys.stdout.write('please enter the host\'s address: '); sys.stdout.flush()
             host = sys.stdin.readline()
-            slist.insert(name, host.rstrip('\n'))
-            menu(slist)
+            slist.insert(name.rstrip('\n'), host.rstrip('\n'))
         elif int(choice) == 2:
             sys.stdout.write('which person would you like to send a message to? '); sys.stdout.flush()
-            host = slist.get_node(sys.stdin.readline())
-            send_msg(host, slist)
+            name = slist.get_node(sys.stdin.readline().rstrip('\n'))
+            send_msg(name, slist)
         elif int(choice) == 3:
-            sys.stdout.write('which host would you like to delete (please enter name)? ')
-            slist.delete_node(sys.stdin.readline())
+            sys.stdout.write('which host would you like to delete (please enter name)? '); sys.stdout.flush()
+            slist.delete_node(sys.stdin.readline().rstrip('\n'))
         elif int(choice) == 4:
             slist.display_all()
         elif int(choice) == 5:
@@ -115,53 +123,53 @@ def menu(slist):
 
 
 def send_msg(host, slist):
-    # set connection type
+    # setup client
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    # set socket timeout
-    srv.settimeout(2)
-
-    # for testing
-    print('%s:%d' % (host, PORT))
+    srv.settimeout(None)
 
     # connect to host
     try:
         srv.connect((host, PORT))
     except:
-        print('\n****************\n'
+        print('\n************************\n'
               'unable to connect\n'
-              '****************\n')
-        menu(slist)
+              '************************\n')
+        return
 
     print("connected to remote host. you can start sending messages\nenter \"/quit\" when done")
     sys.stdout.write('[Me] '); sys.stdout.flush()
 
-    while 1:
-        socket_list = [sys.stdin, srv]
+    try:
+        while 1:
+            socket_list = [sys.stdin, srv]
 
-        # get the list of readable sockets
-        ready_to_read, ready_to_write, in_error = select.select(socket_list, [], [], 0)
+            # get the list of readable sockets
+            ready_to_read, ready_to_write, in_error = select.select(socket_list, [], [], 0)
 
-        for sock in ready_to_read:
-            if sock == srv:
-                # message from server
-                data = sock.recv(4096)
-                if not data:
-                    print('\ndisconnected from chat server')
-                    menu(slist)
-                else:
-                    sys.stdout.write(data)
-                    sys.stdout.write('[Me] '); sys.stdout.flush()
+            '''for sock in ready_to_read:
+                if sock == srv:
+                    # message from server
+                    data = sock.recv(4096)
+                    if not data:
+                        print('\ndisconnected from chat server')
+                        return
+                    else:
+                        sys.stdout.write(data)
+                        sys.stdout.write('[Me] '); sys.stdout.flush()
 
+                else:'''
+            # compose and send message
+            msg = sys.stdin.readline()
+            if msg == '/quit\n':
+                srv.close()
+                return
             else:
-                # User has entered a message
-                msg = sys.stdin.readline()
-                if msg == '/quit':
-                    menu(slist)
-                else:
-                    srv.send(encrypt(msg).encode('utf-8'))
-                    print('message sent')
-                    sys.stdout.write('[Me] '); sys.stdout.flush()
+                srv.send(encrypt(msg).encode('utf-8'))
+                print('message sent: %s' % msg)
+                sys.stdout.write('[Me] '); sys.stdout.flush()
+    except:
+        print('connection to peer lost')
+        return
 
 
 def encrypt(msg):
