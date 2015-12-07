@@ -9,7 +9,7 @@ import select
 
 HOST = ''
 SERVER_LIST = []
-PORT = 13475
+PORT = 6283
 RECV_BUFFER = 4096
 
 
