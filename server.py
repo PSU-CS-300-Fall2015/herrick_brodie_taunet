@@ -15,19 +15,18 @@ RECV_BUFFER = 4096
 
 def server():
     # Create socket and parse which it a IPv4 and a TCP input
-    ser_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    srv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     # Parse it the socket layer and the last parameter says it all
-    ser_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    srv_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
     # Bind HOST and PORT
-    ser_socket.bind((HOST, PORT))
+    srv_sock.bind((HOST, PORT))
 
-    # Start listening on your PORT
-    ser_socket.listen(10)
+    srv_sock.listen(5)
 
     # pass socket to readable socket connection list
-    SERVER_LIST.append(ser_socket)
+    SERVER_LIST.append(srv_sock)
 
     # print check point
     print("Starting server connection listening on PORT: ", str(PORT))
@@ -39,13 +38,12 @@ def server():
         # for each socket in the incoming read
         for sock in ready_to_read:
             # new connection request received
-            if sock == ser_socket:
-                sockfd, addr = ser_socket.accept()
+            if sock == srv_sock:
+                sockfd, addr = srv_sock.accept()
                 SERVER_LIST.append(sockfd)
 
-                print("Client: (%s) " % addr)
-
-                broadcast(ser_socket, sockfd, "[%s] entered our chatting room\n" % addr)
+                print("Client: (%s, %s) " % addr)
+                broadcast(srv_sock, sockfd, "[%s:%s] entered our chatting room\n" % addr)
 
             # A already known connection knocks on the door
             else:
@@ -53,25 +51,25 @@ def server():
                     data = sock.recv(RECV_BUFFER)
                     if data:
                         # Is there anything in the socket
-                        broadcast(ser_socket, sock, "\r" + '[' + str(sock.getpeername()) + '] ' + data)
+                        broadcast(srv_sock, sock, "\r" + '[' + str(sock.getpeername()) + '] ' + data)
                     else:
                         # The socket is broken remove it
                         if sock in SERVER_LIST:
                             SERVER_LIST.remove(sock)
 
-                        broadcast(ser_socket, sock, "Client (%s) is offline\n" % addr)
+                        broadcast(srv_sock, sock, "Client (%s, %s) is offline\n" % addr)
 
                 except:
-                    broadcast(ser_socket, sock, "Client (%s) is offline\n" % addr)
+                    broadcast(srv_sock, sock, "Client (%s, %s) is offline\n" % addr)
                     continue
     # Always close connection when done using it
-    ser_socket.close()
+    srv_sock.close()
 
 
 # The broadcast method is to tell all the clients the incoming messages
 def broadcast(ser_socket, sock, message):
     for socket in SERVER_LIST:
-        if socket != sock:
+        if socket != sock and socket != sock:
             try:
                 socket.send(message)
             except:
