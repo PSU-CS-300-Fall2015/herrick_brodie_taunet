@@ -46,7 +46,7 @@ def server():
                     if msg:
                         # check for contents, and display if present
                         sys.stdout.write('message content: '); sys.stdout.flush()
-                        print(decipher(msg, KEY))
+                        print(decipher(a2b(msg), KEY))
                     else:
                         # socket is broken, remove it
                         if sock in SERVER_LIST:
@@ -59,9 +59,10 @@ def server():
 
 
 def decipher(ciphertext, key):
+    print('decoding in process...')
     iv, ciphertext = ciphertext[:10], ciphertext[10:]
-    message = rc4(bytes(ciphertext, 'utf-8'), bytes(key + iv, 'utf-8'))
-    return ''.join(str(message, 'utf-8'))
+    message = rc4(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
+    return ''.join(map(chr, message))
 
 
 def rc4(keystream, key, n=20):
@@ -72,7 +73,6 @@ def rc4(keystream, key, n=20):
         for i in range(256):
             j = (j + state[i] + key[i % len(key)]) % 256
             state[i], state[j] = state[j], state[i]
-            print('for loop 1')
     i, j = 0, 0
     output = []
     for byte in keystream:
@@ -81,8 +81,12 @@ def rc4(keystream, key, n=20):
         state[i], state[j] = state[j], state[i]
         n = (state[i] + state[j]) % 256
         output.append(byte ^ state[n])
-        print('for loop 2')
     return output
+
+
+def a2b(text):
+    # Given an "armoured" string, return a string of binary data
+    return ''.join(map(chr, [int(w, 16) for w in text.split()]))
 
 
 if __name__ == "__main__":

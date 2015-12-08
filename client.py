@@ -7,6 +7,7 @@ import select
 import socket
 import sys
 import random
+import binascii
 import getpass
 
 PORT = 6283
@@ -173,16 +174,22 @@ def send_msg(host, name, userid, key):
 
                 else:
                     # compose and send message
-                    msg = sys.stdin.readline()
+                    # msg = sys.stdin.readline()
+                    msg = 'this is a test'
                     if msg == '/quit\n':
                         srv.close()
                         return
                     else:
-                        print(encipher((('version: %s\r\nfrom: %s''\r\nto: %s\r\n')
-                                        % (VER, userid, name) + msg), key))
-                        # srv.send(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                        #                    % (VER, userid, host) + msg), key).encode('utf-8'))
-                        sys.stdout.write('[Me] '); sys.stdout.flush()
+                        srv.send(b2a(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                                           % (VER, userid, host) + msg), key)).encode('utf-8'))
+                        # print('original message: %s' % msg)
+                        # msg = b2a(encipher(('version: %s\r\nfrom: %s''\r\nto: %s\r\n'
+                        #                 % (VER, userid, name) + msg), key))
+                        # print('enciphered message: %s' % msg)
+                        # msg = decipher(a2b(msg), key)
+                        # print('deciphered message: %s' % msg)
+                        # sys.stdout.write('[Me] '); sys.stdout.flush()
+                        return
     except:
         print('connection to peer lost')
         return
@@ -192,12 +199,18 @@ def encipher(message, key, iv=''):
     # Given a plaintext string and key, return an enciphered string
     while len(iv) < 10:
         iv += chr(random.randrange(256))
-    keystream = rc4(bytes(message, 'utf-8'), bytes(key + iv, 'utf-8'))
-    print('message encoded')
-    return iv + ''.join(str(keystream, 'utf-8'))
+    ciphertext = arcfour(map(ord, message), bytes(key + iv, 'utf-8'))
+    print('ciphering successful')
+    return iv + ''.join(map(chr, ciphertext))
 
 
-def rc4(keystream, key, n=20):
+def decipher(ciphertext, key):
+    iv, ciphertext = ciphertext[:10], ciphertext[10:]
+    message = arcfour(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
+    return ''.join(map(chr, message))
+
+
+def arcfour(keystream, key, n=20):
     # Perform the RC4 algorithm on a given input list of bytes with a
     # key given as a list of bytes, and return the output as a list of bytes.
     i, j, state = 0, 0, list(range(256))
@@ -214,6 +227,16 @@ def rc4(keystream, key, n=20):
         n = (state[i] + state[j]) % 256
         output.append(byte ^ state[n])
     return output
+
+
+def b2a(text):
+    # Given a string of binary data, return an "armored" string
+    lines = []
+    words = ['%02x' % o for o in map(ord, text)]
+    while words:
+        lines.append(' '.join(words[:23]))
+        del words[:23]
+    return '\n'.join(lines)
 
 
 if __name__ == "__main__":
