@@ -6,8 +6,12 @@
 import select
 import socket
 import sys
+from os import urandom
+from random import randint
+import getpass
 
 PORT = 6283
+VER = '0.2'
 
 
 def client():
@@ -39,11 +43,11 @@ def client():
             current = self.head
             if current is None:
                 print('************************\n',
-                      'there are no servers available, you should add some!')
+                      'you have not added any nodes')
             while current:
                 print('************************\n',
                       'name:', current.name, '\n'
-                      ' host:', current.host, '\n')
+                                             'host:', current.host, '\n')
                 current = current.next
 
         def delete_node(self, name):
@@ -78,18 +82,28 @@ def client():
                 else:
                     current = current.next
             if current is None:
-                print('hostname not found')
+                return
             else:
                 return current.host
 
     # init data
     slist = List()
+    # temp data
+    host = 'pluto.local'
+    name = 'me'
+    userid = 'brodie'
+    key = 'password'
 
     print('welcome to taunet')
-    menu(slist)
+    # sys.stdout.write('please enter your username: '); sys.stdout.flush()
+    # userid = sys.stdin.readline().rstrip()
+    # key = getpass.getpass('what is the passphrase for your network? ')
+
+    # menu(slist, userid, key)
+    send_msg(host, name, userid, key)
 
 
-def menu(slist):
+def menu(slist, userid, key):
     while 1:
         print('\n************************\n'
               'please select an option:\n'
@@ -106,11 +120,12 @@ def menu(slist):
             name = sys.stdin.readline()
             sys.stdout.write('please enter the host\'s address: '); sys.stdout.flush()
             host = sys.stdin.readline()
-            slist.insert(name.rstrip('\n'), host.rstrip('\n'))
+            slist.insert(name.rstrip(), host.rstrip())
         elif int(choice) == 2:
             sys.stdout.write('which person would you like to send a message to? '); sys.stdout.flush()
-            name = slist.get_node(sys.stdin.readline().rstrip('\n'))
-            send_msg(name, slist)
+            name = sys.stdin.readline().rstrip('\n')
+            host = slist.get_node(name)
+            send_msg(host, name, userid, key)
         elif int(choice) == 3:
             sys.stdout.write('which host would you like to delete (please enter name)? '); sys.stdout.flush()
             slist.delete_node(sys.stdin.readline().rstrip('\n'))
@@ -122,7 +137,7 @@ def menu(slist):
             print('input not understood, try again')
 
 
-def send_msg(host, slist):
+def send_msg(host, name, userid, key):
     # setup client
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.settimeout(None)
@@ -136,7 +151,7 @@ def send_msg(host, slist):
               '************************\n')
         return
 
-    print("connected to remote host. you can start sending messages\nenter \"/quit\" when done")
+    print("connected to remote host\nenter \"/quit\" when done")
     sys.stdout.write('[Me] '); sys.stdout.flush()
 
     try:
@@ -146,7 +161,7 @@ def send_msg(host, slist):
             # get the list of readable sockets
             ready_to_read, ready_to_write, in_error = select.select(socket_list, [], [], 0)
 
-            '''for sock in ready_to_read:
+            for sock in ready_to_read:
                 if sock == srv:
                     # message from server
                     data = sock.recv(4096)
@@ -157,25 +172,96 @@ def send_msg(host, slist):
                         sys.stdout.write(data)
                         sys.stdout.write('[Me] '); sys.stdout.flush()
 
-                else:'''
-            # compose and send message
-            msg = sys.stdin.readline()
-            if msg == '/quit\n':
-                srv.close()
-                return
-            else:
-                srv.send(encrypt(msg).encode('utf-8'))
-                print('message sent: %s' % msg)
-                sys.stdout.write('[Me] '); sys.stdout.flush()
+                else:
+                    # compose and send message
+                    msg = sys.stdin.readline()
+                    if msg == '/quit\n':
+                        srv.close()
+                        return
+                    else:
+                        print(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                               % (VER, userid, name) + msg))
+                        # print(encipher((('version: %s\r\nfrom: %s'
+                        #                 '\r\nto: %s\r\n') % (VER, userid, name) +
+                        #                msg).encode('utf-8'), key))
+                        # srv.send(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                        #                    % (VER, userid, host) + msg), key))
+                        srv.send(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                                  % (VER, userid, name) + msg).encode('utf-8'))
+                        print('message sent')
+                        sys.stdout.write('[Me] '); sys.stdout.flush()
     except:
         print('connection to peer lost')
         return
 
 
-def encrypt(msg):
-    # do encryption
-    return msg
+def ciphersaber(instream, key, reps=20, iv=None):
+    if iv is None:
+        try:
+            iv = urandom(10)
+        except NotImplementedError:
+            iv = []
+            for i in range(10):
+                iv.append(randint(0, 255))
+            iv = bytes(iv)
 
+    state = list(range(256))
+    key += iv
+    i, j = 0, 0
+
+    for k in range(reps):
+        for i in range(256):
+            j = (j + state[i] + key[i % len(key)]) % 256
+            state[i], state[j] = state[j], state[i]
+
+    i, j = 0, 0
+
+    for byte in sbytes(instream):
+        i = (i + 1) % 256
+        j = (j + state[i]) % 256
+        state[i], state[j] = state[j], state[i]
+        n = (state[i] + state[j]) % 256
+        outstream = bytes([byte ^ state[n]])
+        return outstream
+
+
+def sbytes(stream):
+    """Generator to iterate over bytes in a stream."""
+    while True:
+        bytes = stream.read(4096)
+        if not bytes:
+            break
+        for c in bytes:
+            yield c
+
+'''
+def encipher(message, key, iv=''):
+    # Given a plaintext string and key, return an enciphered string
+    print('entered encipher method')
+    while len(iv) < 10:
+        iv += chr(random.randrange(256))
+    keystream = rc4(map(ord, message), map(ord, key + iv))
+    return iv + ''.join(map(chr, keystream))
+
+
+def rc4(ciphertext, key, n=20):
+    # Perform the RC4 algorithm on a given input list of bytes with a
+    # key given as a list of bytes, and return the output as a list of bytes.
+    i, j, state = 0, 0, list(range(256))
+    keylen = len(key)
+    for k in range(n):
+        for i in range(256):
+            j = (j + state[i] + key[i % keylen]) % 256
+            state[i], state[j] = state[j], state[i]
+    i, j, output = 0, 0, []
+    for byte in ciphertext:
+        ip = (i + 1) % 256
+        j = (j + state[ip]) % 256
+        state[ip], state[j] = state[j], state[ip]
+        n = (state[i] + state[j]) % 256
+        output.append(byte ^ state[n])
+    return output
+'''
 
 if __name__ == "__main__":
     sys.exit(client())

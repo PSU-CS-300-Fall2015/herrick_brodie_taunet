@@ -36,7 +36,6 @@ def server():
             if sock == srv_socket:
                 sockfd, addr = srv_socket.accept()
                 SERVER_LIST.append(sockfd)
-                print('sockfd: (%s, %s) ' % sockfd)
                 print('client: (%s, %s) ' % addr)
 
             # A already known connection knocks on the door
@@ -45,7 +44,7 @@ def server():
                     msg = sock.recv(RECV_BUFFER)
                     if msg:
                         # check for contents, and display if present
-                        print('[{}]'.format(sock.getpeername()) + decrypt(msg))
+                        print(decrypt(msg))
                     else:
                         # socket is broken, remove it
                         if sock in SERVER_LIST:
