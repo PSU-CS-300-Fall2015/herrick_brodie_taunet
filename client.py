@@ -6,8 +6,7 @@
 import select
 import socket
 import sys
-from os import urandom
-from random import randint
+import random
 import getpass
 
 PORT = 6283
@@ -90,7 +89,7 @@ def client():
     slist = List()
     # temp data
     host = 'pluto.local'
-    name = 'me'
+    name = 'brodie'
     userid = 'brodie'
     key = 'password'
 
@@ -151,7 +150,7 @@ def send_msg(host, name, userid, key):
               '************************\n')
         return
 
-    print("connected to remote host\nenter \"/quit\" when done")
+    print("connected to %s\'s node\nenter \"/quit\" when done" % name)
     sys.stdout.write('[Me] '); sys.stdout.flush()
 
     try:
@@ -179,89 +178,43 @@ def send_msg(host, name, userid, key):
                         srv.close()
                         return
                     else:
-                        print(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                               % (VER, userid, name) + msg))
-                        # print(encipher((('version: %s\r\nfrom: %s'
-                        #                 '\r\nto: %s\r\n') % (VER, userid, name) +
-                        #                msg).encode('utf-8'), key))
+                        print(encipher((('version: %s\r\nfrom: %s''\r\nto: %s\r\n')
+                                        % (VER, userid, name) + msg), key))
                         # srv.send(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                        #                    % (VER, userid, host) + msg), key))
-                        srv.send(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                                  % (VER, userid, name) + msg).encode('utf-8'))
-                        print('message sent')
+                        #                    % (VER, userid, host) + msg), key).encode('utf-8'))
                         sys.stdout.write('[Me] '); sys.stdout.flush()
     except:
         print('connection to peer lost')
         return
 
 
-def ciphersaber(instream, key, reps=20, iv=None):
-    if iv is None:
-        try:
-            iv = urandom(10)
-        except NotImplementedError:
-            iv = []
-            for i in range(10):
-                iv.append(randint(0, 255))
-            iv = bytes(iv)
+def encipher(message, key, iv=''):
+    # Given a plaintext string and key, return an enciphered string
+    while len(iv) < 10:
+        iv += chr(random.randrange(256))
+    keystream = rc4(bytes(message, 'utf-8'), bytes(key + iv, 'utf-8'))
+    print('message encoded')
+    return iv + ''.join(str(keystream, 'utf-8'))
 
-    state = list(range(256))
-    key += iv
-    i, j = 0, 0
 
-    for k in range(reps):
+def rc4(keystream, key, n=20):
+    # Perform the RC4 algorithm on a given input list of bytes with a
+    # key given as a list of bytes, and return the output as a list of bytes.
+    i, j, state = 0, 0, list(range(256))
+    for k in range(n):
         for i in range(256):
             j = (j + state[i] + key[i % len(key)]) % 256
             state[i], state[j] = state[j], state[i]
-
     i, j = 0, 0
-
-    for byte in sbytes(instream):
+    output = []
+    for byte in keystream:
         i = (i + 1) % 256
         j = (j + state[i]) % 256
         state[i], state[j] = state[j], state[i]
         n = (state[i] + state[j]) % 256
-        outstream = bytes([byte ^ state[n]])
-        return outstream
-
-
-def sbytes(stream):
-    """Generator to iterate over bytes in a stream."""
-    while True:
-        bytes = stream.read(4096)
-        if not bytes:
-            break
-        for c in bytes:
-            yield c
-
-'''
-def encipher(message, key, iv=''):
-    # Given a plaintext string and key, return an enciphered string
-    print('entered encipher method')
-    while len(iv) < 10:
-        iv += chr(random.randrange(256))
-    keystream = rc4(map(ord, message), map(ord, key + iv))
-    return iv + ''.join(map(chr, keystream))
-
-
-def rc4(ciphertext, key, n=20):
-    # Perform the RC4 algorithm on a given input list of bytes with a
-    # key given as a list of bytes, and return the output as a list of bytes.
-    i, j, state = 0, 0, list(range(256))
-    keylen = len(key)
-    for k in range(n):
-        for i in range(256):
-            j = (j + state[i] + key[i % keylen]) % 256
-            state[i], state[j] = state[j], state[i]
-    i, j, output = 0, 0, []
-    for byte in ciphertext:
-        ip = (i + 1) % 256
-        j = (j + state[ip]) % 256
-        state[ip], state[j] = state[j], state[ip]
-        n = (state[i] + state[j]) % 256
         output.append(byte ^ state[n])
     return output
-'''
+
 
 if __name__ == "__main__":
     sys.exit(client())

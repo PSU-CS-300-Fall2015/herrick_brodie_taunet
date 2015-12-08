@@ -11,6 +11,7 @@ HOST = ''
 SERVER_LIST = []
 PORT = 6283
 RECV_BUFFER = 4096
+KEY = 'password'
 
 
 def server():
@@ -44,7 +45,8 @@ def server():
                     msg = sock.recv(RECV_BUFFER)
                     if msg:
                         # check for contents, and display if present
-                        print(decrypt(msg))
+                        sys.stdout.write('message content: '); sys.stdout.flush()
+                        print(decipher(msg, KEY))
                     else:
                         # socket is broken, remove it
                         if sock in SERVER_LIST:
@@ -56,9 +58,31 @@ def server():
     srv_socket.close()
 
 
-def decrypt(msg):
-    # do decryption
-    return msg
+def decipher(ciphertext, key):
+    iv, ciphertext = ciphertext[:10], ciphertext[10:]
+    message = rc4(bytes(ciphertext, 'utf-8'), bytes(key + iv, 'utf-8'))
+    return ''.join(str(message, 'utf-8'))
+
+
+def rc4(keystream, key, n=20):
+    # Perform the RC4 algorithm on a given input list of bytes with a
+    # key given as a list of bytes, and return the output as a list of bytes.
+    i, j, state = 0, 0, list(range(256))
+    for k in range(n):
+        for i in range(256):
+            j = (j + state[i] + key[i % len(key)]) % 256
+            state[i], state[j] = state[j], state[i]
+            print('for loop 1')
+    i, j = 0, 0
+    output = []
+    for byte in keystream:
+        i = (i + 1) % 256
+        j = (j + state[i]) % 256
+        state[i], state[j] = state[j], state[i]
+        n = (state[i] + state[j]) % 256
+        output.append(byte ^ state[n])
+        print('for loop 2')
+    return output
 
 
 if __name__ == "__main__":
