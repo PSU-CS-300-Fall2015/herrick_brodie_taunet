@@ -1,4 +1,6 @@
 # Copyright © 2015 Brodie Herrick
+# credit to http://hetland.org/coding/python/ciphersaber2.py
+# for the ciphersaber algorithm
 # [This program is licensed under the GPL version 3 or later.]
 # Please see the file COPYING in the source
 # distribution of this software for license terms.
@@ -6,12 +8,12 @@
 import sys
 import socket
 import select
+import getpass
 
 HOST = ''
 SERVER_LIST = []
 PORT = 6283
 RECV_BUFFER = 4096
-KEY = 'password'
 
 
 def server():
@@ -20,6 +22,9 @@ def server():
     srv_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv_socket.bind((HOST, PORT))
     srv_socket.listen(5)
+
+    # get network passphrase
+    key = getpass.getpass('whatexi is the passphrase for your network? ')
 
     # pass socket to readable socket connection list
     SERVER_LIST.append(srv_socket)
@@ -45,8 +50,7 @@ def server():
                     msg = sock.recv(RECV_BUFFER)
                     if msg:
                         # check for contents, and display if present
-                        sys.stdout.write('message content: '); sys.stdout.flush()
-                        print(decipher(a2b(msg), KEY))
+                        print(decipher(a2b(msg), key))
                     else:
                         # socket is broken, remove it
                         if sock in SERVER_LIST:
@@ -59,7 +63,6 @@ def server():
 
 
 def decipher(ciphertext, key):
-    print('decoding in process...')
     iv, ciphertext = ciphertext[:10], ciphertext[10:]
     message = rc4(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
     return ''.join(map(chr, message))
@@ -85,7 +88,7 @@ def rc4(keystream, key, n=20):
 
 
 def a2b(text):
-    # Given an "armoured" string, return a string of binary data
+    # Given an "armored" string, return a string of binary data
     return ''.join(map(chr, [int(w, 16) for w in text.split()]))
 
 

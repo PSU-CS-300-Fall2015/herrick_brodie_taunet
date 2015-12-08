@@ -1,14 +1,11 @@
 #  Copyright © 2015 Brodie Herrick
+#  credit to http://hetland.org/coding/python/ciphersaber2.py
+#  for the ciphersaber algorithm
 #  [This program is licensed under the GPL version 3 or later.]
 #  Please see the file COPYING in the source
 #  distribution of this software for license terms.
 
-import select
-import socket
-import sys
-import random
-import binascii
-import getpass
+import socket, sys, random, getpass
 
 PORT = 6283
 VER = '0.2'
@@ -88,19 +85,13 @@ def client():
 
     # init data
     slist = List()
-    # temp data
-    host = 'pluto.local'
-    name = 'brodie'
-    userid = 'brodie'
-    key = 'password'
 
     print('welcome to taunet')
-    # sys.stdout.write('please enter your username: '); sys.stdout.flush()
-    # userid = sys.stdin.readline().rstrip()
-    # key = getpass.getpass('what is the passphrase for your network? ')
+    sys.stdout.write('please enter your username: '); sys.stdout.flush()
+    userid = sys.stdin.readline().rstrip()
+    key = getpass.getpass('what is the passphrase for your network? ')
 
-    # menu(slist, userid, key)
-    send_msg(host, name, userid, key)
+    menu(slist, userid, key)
 
 
 def menu(slist, userid, key):
@@ -152,44 +143,19 @@ def send_msg(host, name, userid, key):
         return
 
     print("connected to %s\'s node\nenter \"/quit\" when done" % name)
-    sys.stdout.write('[Me] '); sys.stdout.flush()
+    sys.stdout.write('[%s] ' % userid); sys.stdout.flush()
 
     try:
         while 1:
-            socket_list = [sys.stdin, srv]
-
-            # get the list of readable sockets
-            ready_to_read, ready_to_write, in_error = select.select(socket_list, [], [], 0)
-
-            for sock in ready_to_read:
-                if sock == srv:
-                    # message from server
-                    data = sock.recv(4096)
-                    if not data:
-                        print('\ndisconnected from chat server')
-                        return
-                    else:
-                        sys.stdout.write(data)
-                        sys.stdout.write('[Me] '); sys.stdout.flush()
-
-                else:
-                    # compose and send message
-                    # msg = sys.stdin.readline()
-                    msg = 'this is a test'
-                    if msg == '/quit\n':
-                        srv.close()
-                        return
-                    else:
-                        srv.send(b2a(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                                           % (VER, userid, host) + msg), key)).encode('utf-8'))
-                        # print('original message: %s' % msg)
-                        # msg = b2a(encipher(('version: %s\r\nfrom: %s''\r\nto: %s\r\n'
-                        #                 % (VER, userid, name) + msg), key))
-                        # print('enciphered message: %s' % msg)
-                        # msg = decipher(a2b(msg), key)
-                        # print('deciphered message: %s' % msg)
-                        # sys.stdout.write('[Me] '); sys.stdout.flush()
-                        return
+            # compose and send message
+            msg = sys.stdin.readline()
+            if msg == '/quit\n':
+                srv.close()
+                return
+            else:
+                srv.send(b2a(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                                       % (VER, userid, name) + msg), key)).encode('utf-8'))
+                sys.stdout.write('[%s] ' % userid); sys.stdout.flush()
     except:
         print('connection to peer lost')
         return
@@ -200,7 +166,6 @@ def encipher(message, key, iv=''):
     while len(iv) < 10:
         iv += chr(random.randrange(256))
     ciphertext = arcfour(map(ord, message), bytes(key + iv, 'utf-8'))
-    print('ciphering successful')
     return iv + ''.join(map(chr, ciphertext))
 
 
