@@ -1,6 +1,4 @@
 # Copyright © 2015 Brodie Herrick
-# credit to http://hetland.org/coding/python/ciphersaber2.py
-# for the ciphersaber algorithm
 # [This program is licensed under the GPL version 3 or later.]
 # Please see the file COPYING in the source
 # distribution of this software for license terms.
@@ -24,7 +22,7 @@ def server():
     srv_socket.listen(5)
 
     # get network passphrase
-    key = getpass.getpass('whatexi is the passphrase for your network? ')
+    key = getpass.getpass('what is the passphrase for your network? ')
 
     # pass socket to readable socket connection list
     SERVER_LIST.append(srv_socket)
@@ -47,12 +45,14 @@ def server():
             # A already known connection knocks on the door
             else:
                 try:
-                    msg = sock.recv(RECV_BUFFER)
-                    if msg:
+                    message = sock.recv(RECV_BUFFER)
+                    if message:
                         # check for contents, and display if present
-                        print(decipher(a2b(msg), key))
+                        print(decipher(message.decode('utf-8'), key))
+
                     else:
                         # socket is broken, remove it
+                        print('connection lost')
                         if sock in SERVER_LIST:
                             SERVER_LIST.remove(sock)
 
@@ -63,12 +63,15 @@ def server():
 
 
 def decipher(ciphertext, key):
+    # given ciphertext and key, separate the iv from the ciphertext,
+    # then run them through the RC4 algorithm to recover the message
+    # returning the recovered message
     iv, ciphertext = ciphertext[:10], ciphertext[10:]
-    message = rc4(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
+    message = arcfour(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
     return ''.join(map(chr, message))
 
 
-def rc4(keystream, key, n=20):
+def arcfour(keystream, key, n=20):
     # Perform the RC4 algorithm on a given input list of bytes with a
     # key given as a list of bytes, and return the output as a list of bytes.
     i, j, state = 0, 0, list(range(256))
@@ -76,8 +79,7 @@ def rc4(keystream, key, n=20):
         for i in range(256):
             j = (j + state[i] + key[i % len(key)]) % 256
             state[i], state[j] = state[j], state[i]
-    i, j = 0, 0
-    output = []
+    i, j, output = 0, 0, []
     for byte in keystream:
         i = (i + 1) % 256
         j = (j + state[i]) % 256
@@ -85,12 +87,6 @@ def rc4(keystream, key, n=20):
         n = (state[i] + state[j]) % 256
         output.append(byte ^ state[n])
     return output
-
-
-def a2b(text):
-    # Given an "armored" string, return a string of binary data
-    return ''.join(map(chr, [int(w, 16) for w in text.split()]))
-
 
 if __name__ == "__main__":
     sys.exit(server())

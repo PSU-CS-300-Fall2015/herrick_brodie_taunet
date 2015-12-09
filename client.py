@@ -1,6 +1,4 @@
 #  Copyright © 2015 Brodie Herrick
-#  credit to http://hetland.org/coding/python/ciphersaber2.py
-#  for the ciphersaber algorithm
 #  [This program is licensed under the GPL version 3 or later.]
 #  Please see the file COPYING in the source
 #  distribution of this software for license terms.
@@ -25,14 +23,9 @@ def client():
             self.head = None
 
         def insert(self, name, host):
-            # init new node
             new_node = Node()
-
-            # set node data
             new_node.name = name
             new_node.host = host
-
-            # insert node into list
             new_node.next = self.head
             self.head = new_node
 
@@ -48,8 +41,6 @@ def client():
                 current = current.next
 
         def delete_node(self, name):
-            # search for and remove node, if found
-            # otherwise, display error
             current = self.head
             prev = None
             found = False
@@ -69,8 +60,6 @@ def client():
             print('node deleted')
 
         def get_node(self, name):
-            # search for node and return it
-            # otherwise, display error
             current = self.head
             found = False
             while current and found is False:
@@ -153,8 +142,8 @@ def send_msg(host, name, userid, key):
                 srv.close()
                 return
             else:
-                srv.send(b2a(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
-                                       % (VER, userid, name) + msg), key)).encode('utf-8'))
+                srv.send(encipher(('version: %s\r\nfrom: %s\r\nto: %s\r\n'
+                                   % (VER, userid, name) + msg), key).encode('utf-8'))
                 sys.stdout.write('[%s] ' % userid); sys.stdout.flush()
     except:
         print('connection to peer lost')
@@ -169,12 +158,6 @@ def encipher(message, key, iv=''):
     return iv + ''.join(map(chr, ciphertext))
 
 
-def decipher(ciphertext, key):
-    iv, ciphertext = ciphertext[:10], ciphertext[10:]
-    message = arcfour(map(ord, ciphertext), bytes(key + iv, 'utf-8'))
-    return ''.join(map(chr, message))
-
-
 def arcfour(keystream, key, n=20):
     # Perform the RC4 algorithm on a given input list of bytes with a
     # key given as a list of bytes, and return the output as a list of bytes.
@@ -183,8 +166,7 @@ def arcfour(keystream, key, n=20):
         for i in range(256):
             j = (j + state[i] + key[i % len(key)]) % 256
             state[i], state[j] = state[j], state[i]
-    i, j = 0, 0
-    output = []
+    i, j, output = 0, 0, []
     for byte in keystream:
         i = (i + 1) % 256
         j = (j + state[i]) % 256
@@ -192,16 +174,6 @@ def arcfour(keystream, key, n=20):
         n = (state[i] + state[j]) % 256
         output.append(byte ^ state[n])
     return output
-
-
-def b2a(text):
-    # Given a string of binary data, return an "armored" string
-    lines = []
-    words = ['%02x' % o for o in map(ord, text)]
-    while words:
-        lines.append(' '.join(words[:23]))
-        del words[:23]
-    return '\n'.join(lines)
 
 
 if __name__ == "__main__":
