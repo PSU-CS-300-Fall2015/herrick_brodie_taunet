@@ -1,1 +1,23 @@
-[In Progress]
+Brody Herrick
+80 B-
+
+(Failed to follow instructions on getting repository into
+class GitHub project, which meant that code was publicly
+readable, which is not ideal. It also meant that it almost
+didn't get graded.)
+
+README is very brief, and does not contain license
+information, nor details on how to run the program (for
+example, that it requires python3). Brief but adequate
+PER. SDD is not too clear about architecture; requirements
+trace is nice. STP lacks any detail about actual testing.
+
+Source code is clean and clear. Should not have copies of
+RC4 code in both client and server: use a single module. Git
+history is adequate, but shows an implementation over four
+days.
+
+Server does not ignore zero-length messages as required.
+Client does not put a blank line after the
+headers. Encryption is broken with respect to the TauNet
+standard.
